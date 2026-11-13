@@ -658,7 +658,9 @@ class CtxScheme:
                 view names. It selects output only and never narrows what
                 may be read. Omitted, the scheme's default format, or for a
                 scheme that declares surfaces, each surface the result
-                writes in its default view for the marking's role.
+                writes in its default view for the marking's role, or the one
+                default that writes every other surface's scope beside its
+                own, alone. A named output is written alone.
             surface: Optional validation surface, named with one of the
                 scheme's scope ids. Omitted, the marking is evaluated as a
                 whole.
@@ -770,7 +772,9 @@ class CtxScheme:
                 view names. It selects output only and never narrows what
                 may be read. Omitted, the scheme's default format, or for a
                 scheme that declares surfaces, each surface the result
-                writes in its default view for the marking's role.
+                writes in its default view for the marking's role, or the one
+                default that writes every other surface's scope beside its
+                own, alone. A named output is written alone.
             surface: Optional validation surface, named with one of the
                 scheme's scope ids. Omitted, the marking is evaluated as a
                 whole.
@@ -839,7 +843,9 @@ class CtxScheme:
                 id, a ``surface/view`` address, or the id of a form exactly
                 one view names. Omitted, the scheme's default format, or for
                 a scheme that declares surfaces, each surface the result
-                writes in its default view for the marking's role.
+                writes in its default view for the marking's role, or the one
+                default that writes every other surface's scope beside its
+                own, alone. A named output is written alone.
             surface: Optional validation surface, named with one of the
                 scheme's scope ids. Omitted, the marking is evaluated as a
                 whole.
@@ -1024,7 +1030,9 @@ class CtxScheme:
                 one view names. It selects output only and never narrows what
                 may be read. Omitted, the scheme's default format, or for a
                 scheme that declares surfaces, each surface's default view
-                for a whole marking, since a rollup is a whole.
+                for a whole marking, since a rollup is a whole, or the one
+                default that writes every other surface's scope beside its
+                own, alone. A named output is written alone.
             surface: Optional validation surface of the rollup, named with
                 one of the scheme's scope ids. It names what the combined
                 marking is, not what any one input was. Omitted, the rollup is
@@ -1068,7 +1076,9 @@ class CtxScheme:
                 id, a ``surface/view`` address, or the id of a form exactly
                 one view names. Omitted, the scheme's default format, or for
                 a scheme that declares surfaces, each surface's default view
-                for a whole marking, since a rollup is a whole.
+                for a whole marking, since a rollup is a whole, or the one
+                default that writes every other surface's scope beside its
+                own, alone. A named output is written alone.
             surface: Optional validation surface of the rollup, named with
                 one of the scheme's scope ids. Omitted, the marking is
                 evaluated as a whole and every required category it owns must

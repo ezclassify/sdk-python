@@ -1,4 +1,4 @@
-# Code generated from vendored contracts@873167a63048b3cfe83f9517e3385dbeee933bcf7497e01f7a41e79645b618d6. DO NOT EDIT.
+# Code generated from vendored contracts@cabcb9594ef91861db01c4a35b5c19c72f2758d784f0a987dbe6ff89064c87cf. DO NOT EDIT.
 """Pydantic models generated from EzClassify's vendored OpenAPI and JSON Schemas."""
 
 from __future__ import annotations
@@ -442,18 +442,19 @@ class ValidateResult(_WireModel):
     rendered: str
     """The settled marking, in one string.
 
-    It is written in the output the request names. With none named, a scheme without
-    `render.surfaces` writes its default format, and a scheme with them writes each
-    surface in its default for the marking's role, by the rule
-    `RenderConfigDoc.surfaces` states. Every operation that returns this shape follows
-    that one rule.
+    It is written in the output the request names, and in that output alone. With none
+    named, a scheme without `render.surfaces` writes its default format, and a scheme
+    with them writes each surface the result writes in its default for the marking's
+    role, by the rule `RenderConfigDoc.surfaces` states. Every operation that returns
+    this shape follows that one rule.
 
-    For a scheme that declares `render.surfaces`, the string is the output resolved on
-    each surface the result writes, as `RenderConfigDoc.surfaces` describes, in declared
-    surface order and joined by `render.surface_separator`. An output that writes
-    nothing adds nothing, and outputs written as XML attributes in one namespace merge
-    into one attribute list. One refused output refuses the whole string, and
-    `assessment` says which one and why.
+    For a scheme that declares `render.surfaces`, the string holds the outputs
+    `RenderConfigDoc.surfaces` selects, in declared surface order and joined by
+    `render.surface_separator`: the one output a request names, or with none named the
+    one default that writes every other surface's scope beside its own, else each
+    surface's default. An output that writes nothing adds nothing, and outputs written
+    as XML attributes in one namespace merge into one attribute list. One refused output
+    refuses the whole string, and `assessment` says which one and why.
     """
     valid: StrictBool
     """True when the marking stands once the engine has settled it: read, repaired,
@@ -1464,9 +1465,9 @@ class MarkingValidation(_WireModel):
     """
     rendered: str
     """The settled marking, written as validate writes it when the request names no output:
-    in the scheme's default format, or for a scheme that declares `render.surfaces`,
-    each written surface in its default for the role the marking has in this document,
-    by the rule `RenderConfigDoc.surfaces` states.
+    in the scheme's default format, or for a scheme that declares `render.surfaces`, in
+    the defaults for the role the marking has in this document that the rule
+    `RenderConfigDoc.surfaces` states for an unnamed output selects.
     """
 
 class AuditWhole(_WireModel):

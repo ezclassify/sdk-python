@@ -208,7 +208,9 @@ output, so they take `output_format` alone.
   id of a form exactly one view names. Leave it out and you get the scheme's
   default. For a scheme that declares surfaces, that is each surface's default
   view for the marking's role, so a part and a whole can come back in
-  different views.
+  different views, unless one default writes every other surface's scope
+  beside its own, which is then written alone. An output you name is always
+  written alone.
 - `input_format` says what the text is read as: a format id, or a view id, a
   `surface/view` address or one of a view's forms. Leave it out and
   recognition works it out. `recognition["inputFormat"]` reports what the text
