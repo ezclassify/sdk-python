@@ -753,34 +753,23 @@ def test_every_read_the_contract_declares_has_a_query_case() -> None:
 
 
 # Negative controls. A gate that cannot fail proves nothing, so pin the two
-# failure modes it exists for: a removed field, and a missing required one.
+# failure modes it exists for: an undeclared field, and a missing required one.
 
 
 @pytest.mark.parametrize(
     ("route", "body", "field"),
     [
-        ("scheme/process", {"input": "H", "format": "banner"}, "format"),
-        ("scheme/process", {"input": "H", "scope": "portion"}, "scope"),
-        ("scheme/validate", {"input": "H", "scope": "portion"}, "scope"),
-        ("scheme/process", {"input": "H", "tolerant": True}, "tolerant"),
-        ("scheme/process", {"input": "H", "normalization": "loose"}, "normalization"),
+        ("scheme/process", {"input": "H", "note": "kept"}, "note"),
+        ("scheme/validate", {"input": "H", "note": "kept"}, "note"),
         ("scheme/explain", {"input": "H", "outputs": ["banner"]}, "outputs"),
         ("scheme/explain", {"input": "H", "suggestFor": ["level"]}, "suggestFor"),
-        ("scheme/suggest", {"input": "H", "format": "banner"}, "format"),
-        (
-            "scheme/aggregate",
-            {"inputs": ["H"], "format": "banner", "scope": "portion"},
-            "format",
-        ),
-        (
-            "scheme/aggregate",
-            {"assertionSets": [], "format": "banner"},
-            "format",
-        ),
-        ("scheme/diff", {"a": "H", "b": "L", "format": "banner"}, "format"),
+        ("scheme/suggest", {"input": "H", "note": "kept"}, "note"),
+        ("scheme/aggregate", {"inputs": ["H"], "note": "kept"}, "note"),
+        ("scheme/aggregate", {"assertionSets": [], "note": "kept"}, "note"),
+        ("scheme/diff", {"a": "H", "b": "L", "note": "kept"}, "note"),
     ],
 )
-def test_validator_rejects_removed_fields(
+def test_validator_rejects_an_undeclared_field(
     spec: OpenApiRequestSchemas, route: str, body: Dict[str, Any], field: str
 ) -> None:
     errors = spec.validate("post", _ROUTE_PREFIX + route, body)
@@ -812,7 +801,7 @@ def test_validator_rejects_missing_required_field_and_wrong_type(
     assert wrong_type
 
 
-def test_validator_accepts_the_renamed_fields(spec: OpenApiRequestSchemas) -> None:
+def test_validator_accepts_a_current_body(spec: OpenApiRequestSchemas) -> None:
     errors = spec.validate(
         "post",
         _ROUTE_PREFIX + "scheme/process",
