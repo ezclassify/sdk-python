@@ -11,12 +11,10 @@ import httpx
 import pytest
 
 from ezclassify_rest_client.client import _api_error
-from ezclassify_rest_contract import (
+from ezclassify_rest_client import (
     ContextAccessRequirementsResult,
-    ContextDocumentAccessAssessmentResult,
     ContextDocumentAuditResult,
 )
-
 
 _SEMANTIC_ROOT = Path(__file__).parents[1] / "vendor" / "spec" / "semantic" / "v1"
 _CONTRACT = json.loads(
@@ -74,8 +72,6 @@ def _assert_semantic_clause(output: dict[str, Any], assertion: dict[str, Any]) -
 
 
 def _success_model(operation: str):
-    if operation == "assessDocumentAccess":
-        return ContextDocumentAccessAssessmentResult
     if operation == "documentAccessRequirements":
         return ContextAccessRequirementsResult
     return ContextDocumentAuditResult
@@ -122,11 +118,16 @@ def test_canonical_document_semantic_case(case_id: str) -> None:
 
 
 def test_semantic_corpus_is_complete() -> None:
-    """The corpus is the count: cases run 1..N in order, each with one request and
-    one recording, so a dropped or added case fails here without a pinned total."""
+    """The corpus is the count: each case has one request and one recording, so a
+    dropped or added case fails here without a pinned total. Case numbers are
+    stable identities, so a retired case leaves a gap; they still ascend, and each
+    request id is the number's own."""
     numbers = [case["number"] for case in _CONTRACT["cases"]]
     assert numbers, "the semantic contract declares no cases"
-    assert numbers == list(range(1, len(numbers) + 1))
+    assert numbers == sorted(set(numbers))
+    assert [case["requestId"] for case in _CONTRACT["cases"]] == [
+        f"case-{number:02d}" for number in numbers
+    ]
     assert set(_RECORDINGS) == set(_CASES)
     assert set(_REQUESTS) == set(_CASES)
 

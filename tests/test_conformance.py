@@ -36,42 +36,53 @@ _RECORDINGS_DIR = _ENGINE_SPEC / "recordings" / "v1"
 # builds the test-only Context path for each fixture composition.
 
 # Number of engine-slice plan cases this runner must execute against the
-# vendored spec bundle. Engine-only registry vectors are outside the HTTP
-# adapter's contract; all other cases run. The count is a pinned golden: when
+# vendored spec bundle; every case runs. The count is a pinned golden: when
 # the vendored bundle deliberately adds or removes plan cases, update it in the
 # same commit. Without the pin, a missing recording or unreadable fixture would
 # silently shrink the suite.
-_EXPECTED_CASE_COUNT = 144
+_EXPECTED_CASE_COUNT = 147
 
 
-def _context_base(fixture: Any, guide_fixture: str) -> str:
+def _context_base(fixture: Any, guide_fixture: str, access_fixture: str) -> str:
     """Return a unique test-only Context path for one fixture composition.
 
     The request body carries no loose scheme/layer selectors. Encoding
     the fixture identity in this synthetic Context id prevents recordings for
     two different compositions with the same operation body from colliding.
     """
-    identity = _stable_json({"fixture": fixture, "guideFixture": guide_fixture})
+    identity = _stable_json(
+        {
+            "fixture": fixture,
+            "guideFixture": guide_fixture,
+            "accessFixture": access_fixture,
+        }
+    )
     digest = hashlib.sha256(identity.encode()).hexdigest()[:16]
     return f"/v1/ctx/conformance-{digest}/1.0.0"
 
 
 def _recording_key(
-    method: str, args: Any, fixture: Any, mode: str, ctx_id: str, ctx_version: str
+    method: str,
+    args: Any,
+    fixture: Any,
+    mode: str,
+    ctx_id: str,
+    ctx_version: str,
+    guide_fixture: str,
+    access_fixture: str,
 ) -> str:
     """Compute the recording lookup key using the canonical hash algorithm."""
-    raw = (
-        method
-        + "|"
-        + _stable_json(args)
-        + "|"
-        + _stable_json(fixture)
-        + "|"
-        + mode
-        + "|"
-        + ctx_id
-        + "|"
-        + ctx_version
+    raw = "|".join(
+        [
+            method,
+            _stable_json(args),
+            _stable_json(fixture),
+            mode,
+            ctx_id,
+            ctx_version,
+            guide_fixture,
+            access_fixture,
+        ]
     )
     return hashlib.sha256(raw.encode()).hexdigest()
 
@@ -110,6 +121,7 @@ def _build_plan_body(
     args: list,
     fixture: Any,
     guide_fixture: str,
+    access_fixture: str = "",
 ) -> tuple[str, dict, tuple[str, str] | None]:
     """Construct the HTTP API path and request body for a plan case.
 
@@ -119,7 +131,7 @@ def _build_plan_body(
     missing or unreadable fixture) that must fail the suite by name instead of
     vanishing.
     """
-    ctx_base = _context_base(fixture, guide_fixture)
+    ctx_base = _context_base(fixture, guide_fixture, access_fixture)
 
     if method in ("ctxProcess", "ctxScan", "ctxDocumentAudit"):
         return (
@@ -141,9 +153,6 @@ def _build_plan_body(
                     raise ValueError(f"Conflicting plan option: {key}")
                 body[key] = value
         return body
-
-    if method in ("registryProcessAll", "registrySuggestAcross"):
-        return "", {}, ("skip", "loose registry operations are not public SDK routes")
 
     if method == "checkAccess":
         # The access policy is bound to the context; the body carries only the
@@ -167,11 +176,11 @@ def _build_plan_body(
             body = {"text": str_arg(0), "guideId": guide_id}
             return f"{ctx_base}/guide/scan", body, None
 
-        # evaluateMany over the plan's single-guide fixtures is equivalent to a
-        # single-guide evaluate, so both fold onto the ctx guide/evaluate route
-        # (the same fold the client runner uses). The guide is bound to the
-        # context; the body carries only the guide id and the selected rules.
+        # evaluateGuide names the plan's guide; evaluateMany sends the plan's
+        # selections, each already naming its guide.
         selected = args[0] if args and isinstance(args[0], list) else []
+        if method == "evaluateMany":
+            return f"{ctx_base}/guide/evaluate", {"selections": selected}, None
         body = {"guideId": guide_id, "selectedRuleIds": selected}
         return f"{ctx_base}/guide/evaluate", body, None
 
@@ -214,9 +223,6 @@ def _build_plan_body(
         else:
             suggest_body = {"input": str_arg(0)}
         return f"{ctx_base}/scheme/suggest", plan_options(suggest_body), None
-
-    if method == "normalize":
-        return f"{ctx_base}/scheme/normalize", plan_options({"input": str_arg(0)}), None
 
     if method == "render":
         render_body: dict = {"assertions": args[0] if args else []}
@@ -273,10 +279,34 @@ def _subset_match(actual: Any, expected: Any) -> bool:
             return False
         return all(_subset_match(actual[i], expected[i]) for i in range(len(expected)))
     if isinstance(expected, dict):
+        if isinstance(actual, list):
+            # An object read against an array addresses it as a JavaScript
+            # lookup does, the way the Node reference matcher reads it: decimal
+            # keys name elements and "length" pins the exact count.
+            return all(
+                _subset_match(_array_member(actual, k), v) for k, v in expected.items()
+            )
         if not isinstance(actual, dict):
             return False
         return all(_subset_match(actual.get(k), v) for k, v in expected.items())
     return expected == actual
+
+
+def _array_member(actual: list, key: str) -> Any:
+    """Read ``key`` from ``actual`` as a JavaScript property lookup would."""
+    if key == "length":
+        return len(actual)
+    if key.isdecimal() and str(int(key)) == key and int(key) < len(actual):
+        return actual[int(key)]
+    return None
+
+
+def test_subset_match_reads_an_object_against_an_array_by_index_and_length():
+    spans = [{"inner": "A", "start": 0}, {"inner": "B", "start": 9}]
+    assert _subset_match(spans, {"1": {"inner": "B"}, "length": 2})
+    assert not _subset_match(spans, {"length": 1})
+    assert not _subset_match([], {"0": {"inner": "A"}})
+    assert not _subset_match(spans, {"01": {"inner": "B"}})
 
 
 def test_subset_match_rejects_boolean_for_expected_number():
@@ -293,7 +323,7 @@ def _collect_cases() -> list[tuple[str, dict]]:
     """Collect all engine-slice plan cases as (plan_name, case_dict) pairs."""
     cases: list[tuple[str, dict]] = []
     for plan_path in sorted(_PLANS_DIR.glob("*.json")):
-        if plan_path.name in ("plan-schema.json", "registry.json"):
+        if plan_path.name == "plan-schema.json":
             continue
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         if plan.get("slice") != "engine":
@@ -321,13 +351,25 @@ def _build_replayer_map() -> dict[str, dict]:
         ctx_id = tc.get("ctxId", "")
         ctx_version = tc.get("ctxVersion", "")
         guide_fixture = tc.get("guideFixture", "")
+        access_fixture = tc.get("accessFixture", "")
 
-        rec_key = _recording_key(method, args, fixture, mode, ctx_id, ctx_version)
+        rec_key = _recording_key(
+            method,
+            args,
+            fixture,
+            mode,
+            ctx_id,
+            ctx_version,
+            guide_fixture,
+            access_fixture,
+        )
         response = all_recordings.get(rec_key)
         if response is None:
             continue
 
-        api_path, body, verdict = _build_plan_body(method, args, fixture, guide_fixture)
+        api_path, body, verdict = _build_plan_body(
+            method, args, fixture, guide_fixture, access_fixture
+        )
         if verdict is not None:
             continue
 
@@ -391,9 +433,12 @@ def test_conformance_case(
     args = test_case.get("args", [])
     fixture = test_case.get("fixture")
     guide_fixture = test_case.get("guideFixture", "")
+    access_fixture = test_case.get("accessFixture", "")
     expect = test_case.get("expect")
 
-    api_path, body, verdict = _build_plan_body(method, args, fixture, guide_fixture)
+    api_path, body, verdict = _build_plan_body(
+        method, args, fixture, guide_fixture, access_fixture
+    )
 
     if verdict is not None:
         kind, reason = verdict
@@ -440,8 +485,8 @@ def test_conformance_case(
 def test_executed_case_count() -> None:
     """Guard the suite against silent shrinkage.
 
-    Every collected HTTP case must execute. Engine-only registry ownership is
-    checked separately, so new methods cannot silently reduce this count.
+    Every collected HTTP case must execute, so a new method without a driver
+    cannot silently reduce this count.
     """
     executed = []
     for plan_name, tc in _collect_cases():
@@ -450,6 +495,7 @@ def test_executed_case_count() -> None:
             tc.get("args", []),
             tc.get("fixture"),
             tc.get("guideFixture", ""),
+            tc.get("accessFixture", ""),
         )
         assert verdict is None, (
             f"unexecutable HTTP case: {plan_name}/{tc['name']}: {verdict}"
@@ -548,7 +594,7 @@ def _synthetic_plan_recordings(same_response: bool) -> tuple[list, dict]:
     recordings = {}
     for index, (_, case) in enumerate(cases):
         key = _recording_key(
-            "validate", case["args"], case["fixture"], "fromJSON", "", ""
+            "validate", case["args"], case["fixture"], "fromJSON", "", "", "", ""
         )
         recordings[key] = {"valid": True if same_response else index == 0}
     return cases, recordings
@@ -576,17 +622,6 @@ def test_equivalent_recorded_request_identity_keeps_same_answer(
     assert list(_build_replayer_map().values()) == [
         {"statusCode": 200, "body": {"valid": True}}
     ]
-
-
-def test_registry_plan_is_owned_by_embedded_engine() -> None:
-    """Ambient registry fan-out is intentionally absent from the HTTP SDK."""
-    plan = json.loads((_PLANS_DIR / "registry.json").read_text())
-    assert plan["slice"] == "engine"
-    assert len(plan["cases"]) == 5
-    assert {case["method"] for case in plan["cases"]} == {
-        "registryProcessAll",
-        "registrySuggestAcross",
-    }
 
 
 def test_unknown_plan_method_fails_execution_contract() -> None:

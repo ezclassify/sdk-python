@@ -17,7 +17,7 @@ from ezclassify_rest_client import (
 )
 from ezclassify_rest_client._deadline import _DeadlineTransport
 from ezclassify_rest_client.client import _api_error
-from ezclassify_rest_contract import Assertion
+from ezclassify_rest_client import Assertion, GuideRuleSelection
 
 from .wire_corpus import WireCase
 
@@ -119,6 +119,9 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
                 return ctx._send("POST", op, body=case.body)[0]
             return _post_with_query(ctx, op, case.body, query)
         return ctx._send("GET", op, params=query)[0]
+    # A case that names a scheme is a call on that scheme's view; every other
+    # scheme case is a call on the primary view, which sends no selector.
+    s = ctx.schemes.get(query["scheme"]) if query and "scheme" in query else ctx.scheme
     if case.method == "GET":
         if op == "":
             description = ctx.describe()
@@ -128,21 +131,22 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
             return description
         if op == "scheme/describe-concept":
             assert query is not None
-            return ctx.scheme.describe_concept(query["conceptId"], query["categoryId"])
+            return s.describe_concept(
+                query["conceptId"], query["categoryId"], view=query.get("view")
+            )
         resources = {
-            "scheme": ctx.scheme.summary,
-            "scheme/concepts": ctx.scheme.concepts,
-            "scheme/categories": ctx.scheme.categories,
-            "scheme/formats": ctx.scheme.formats,
-            "scheme/grammar": ctx.scheme.grammar,
-            "scheme/scopes": ctx.scheme.scopes,
-            "scheme/label-presets": ctx.scheme.label_presets,
+            "scheme": s.summary,
+            "scheme/concepts": s.concepts,
+            "scheme/categories": s.categories,
+            "scheme/formats": s.formats,
+            "scheme/scopes": s.scopes,
+            "scheme/label-presets": s.label_presets,
             "access/rules": ctx.access.rules,
+            "crosswalk/describe": ctx.crosswalk.describe,
         }
         return resources[op]()
     body = case.body
     assert isinstance(body, dict)
-    s = ctx.scheme
     if op == "scheme/process":
         return s.process(
             _text(body, "input"),
@@ -194,8 +198,6 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
         )
     if op == "scheme/explain":
         return s.explain(_text(body, "input"))
-    if op == "scheme/normalize":
-        return s.normalize(_text(body, "input"))
     if op == "scheme/render":
         return s.render(
             _facts(body["assertions"]),
@@ -207,8 +209,6 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
         return s.view()
     if op == "scheme/notices":
         return s.notices(_facts(body["assertions"]))
-    if op == "scheme/filter-concepts":
-        return s.filter_concepts(_text(body, "query"))
     if op == "scheme/scan":
         return s.scan(_text(body, "text"))
     if op == "scheme/aggregate":
@@ -231,26 +231,23 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
         return ctx.access.check_by_marking(
             _text(body, "marking"), _attributes(body), context=_context(body)
         )
-    if op == "access/describe-rule":
-        return ctx.access.describe_rule(_text(body, "ruleId"))
     if op == "access/describe-requirements":
         return ctx.access.describe_requirements(_text(body, "marking"))
     if op == "guide/scan":
         return ctx.guide.scan(_text(body, "text"))
     if op == "guide/evaluate":
+        if "selections" in body:
+            return ctx.guide.evaluate_many(
+                *(
+                    GuideRuleSelection.model_validate(item)
+                    for item in body["selections"]
+                )
+            )
         rules = _strings(body, "selectedRuleIds")
         assert rules is not None
-        if body.get("allGuides") is True:
-            return ctx.guide.evaluate_many(*rules)
         return ctx.guide.evaluate(_text(body, "guideId"), *rules)
-    if op == "guide/describe-rule":
-        return ctx.guide.describe_rule(
-            _text(body, "ruleId"), _optional_text(body, "guideId")
-        )
     if op == "guide/view":
         return ctx.guide.view(_optional_text(body, "guideId"))
-    if op == "guide/filter-rules":
-        return ctx.guide.filter_rules(_text(body, "query"))
     if op == "crosswalk/translate":
         if "assertions" in body:
             return ctx.crosswalk.translate(
@@ -263,15 +260,6 @@ def run_context(case: WireCase, ctx: EzClassifyContext) -> object:
         profile = _optional_text(body, "responseProfile")
         assert profile in (None, "summary", "standard", "full")
         return ctx.document.audit(_text(body, "text"), response_profile=profile)
-    if op == "document/assess-access":
-        profile = _optional_text(body, "responseProfile")
-        assert profile in (None, "summary", "standard", "full")
-        return ctx.document.assess_access(
-            _text(body, "text"),
-            _attributes(body),
-            context=_context(body),
-            response_profile=profile,
-        )
     raise AssertionError(f"no public driver for {case.id}: {op}")
 
 
@@ -339,20 +327,9 @@ PRIVATE_SEAMS: dict[str, str] = {
     "ctx-scheme-suggest.input-format-with-facts": UNBUILDABLE_REQUEST,
     "ctx-crosswalk-translate.both-sources": UNBUILDABLE_REQUEST,
     "ctx-crosswalk-translate.no-source": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-fix": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-preserveDeprecated": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-normalization": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-skipRepair": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-skipInference": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-tolerant": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-validateOnly": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-scope": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-format": UNBUILDABLE_REQUEST,
-    "ctx-scheme-process.undeclared-request-field-repairStrategy": UNBUILDABLE_REQUEST,
     "ctx-scheme-process.undeclared-request-field-unknownField": UNBUILDABLE_REQUEST,
     "ctx-scheme-validate.undeclared-field": UNBUILDABLE_REQUEST,
     "ctx-scheme-explain.undeclared-field": UNBUILDABLE_REQUEST,
-    "ctx-scheme-normalize.undeclared-field": UNBUILDABLE_REQUEST,
     "ctx-scheme-aggregate.undeclared-field": UNBUILDABLE_REQUEST,
     "ctx-scheme-suggest.undeclared-field": UNBUILDABLE_REQUEST,
     "ctx-scheme-suggest-for-categories.undeclared-field": UNBUILDABLE_REQUEST,

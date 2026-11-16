@@ -10,7 +10,8 @@ fails here instead of as a 400 from a live server.
 Requests are closed in the query too: the server answers 400 to a query
 parameter the operation does not declare. Every call is therefore also checked
 for the query it sends, which must be exactly what the operation declares once
-every optional argument is supplied, and nothing at all for a POST.
+every optional argument is supplied. Scheme calls go through a scheme view, so
+the scheme's key is part of what they supply.
 
 This exists because the failure it catches is invisible to the rest of the
 suite: when a request field is renamed in the contract, a method that keeps
@@ -31,12 +32,12 @@ import respx
 import yaml
 
 from ezclassify_rest_client import EzClassifyClient, EzClassifyContext
-from ezclassify_rest_contract import (
+from ezclassify_rest_client import (
     Assertion,
     GuideDeterminationInput,
+    GuideRuleSelection,
     GuideFindingDetermination,
 )
-
 
 SPEC_PATH = Path(__file__).resolve().parents[2] / "vendor/spec/openapi.yaml"
 
@@ -361,7 +362,6 @@ _DETERMINATIONS = GuideDeterminationInput(
 
 _PART_OF = {"role": "part", "partOf": {"rendered": "H//A"}}
 
-
 # One case per client call that sends a body, keyed by a readable name. Each
 # supplies every optional argument the call takes, so the whole option surface
 # reaches the wire. Calls that build a different body for the same route get
@@ -369,7 +369,7 @@ _PART_OF = {"role": "part", "partOf": {"rendered": "H//A"}}
 CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     "scheme.process": (
         "scheme/process",
-        lambda c: c.scheme.process(
+        lambda c: c.schemes.get("acme").process(
             "H//A",
             output_format="banner",
             surface="portion",
@@ -385,7 +385,7 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     # spelling is its own case.
     "scheme.validate-text": (
         "scheme/validate",
-        lambda c: c.scheme.validate(
+        lambda c: c.schemes.get("acme").validate(
             "H//A",
             output_format="banner",
             surface="portion",
@@ -396,7 +396,7 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.validate-facts": (
         "scheme/validate",
-        lambda c: c.scheme.validate(
+        lambda c: c.schemes.get("acme").validate(
             assertions=[_LEVEL],
             output_format="banner",
             surface="portion",
@@ -406,7 +406,7 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.explain": (
         "scheme/explain",
-        lambda c: c.scheme.explain(
+        lambda c: c.schemes.get("acme").explain(
             "H//A",
             output_format="banner",
             surface="portion",
@@ -418,7 +418,7 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.suggest": (
         "scheme/suggest",
-        lambda c: c.scheme.suggest(
+        lambda c: c.schemes.get("acme").suggest(
             "H//",
             output_format="banner",
             surface="portion",
@@ -429,7 +429,7 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.suggest-facts": (
         "scheme/suggest",
-        lambda c: c.scheme.suggest(
+        lambda c: c.schemes.get("acme").suggest(
             assertions=[_LEVEL],
             output_format="banner",
             surface="portion",
@@ -439,13 +439,13 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.suggest-for-categories": (
         "scheme/suggest-for-categories",
-        lambda c: c.scheme.suggest_for_categories(
+        lambda c: c.schemes.get("acme").suggest_for_categories(
             [_LEVEL], ["level", "audience"], output_format="banner", surface="portion"
         ),
     ),
     "scheme.aggregate": (
         "scheme/aggregate",
-        lambda c: c.scheme.aggregate(
+        lambda c: c.schemes.get("acme").aggregate(
             ["H", "L"],
             output_format="banner",
             surface="portion",
@@ -455,13 +455,13 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.aggregate-assertions": (
         "scheme/aggregate",
-        lambda c: c.scheme.aggregate_assertions(
+        lambda c: c.schemes.get("acme").aggregate_assertions(
             [[_LEVEL]], output_format="banner", surface="portion", context=_PART_OF
         ),
     ),
     "scheme.scan": (
         "scheme/scan",
-        lambda c: c.scheme.scan(
+        lambda c: c.schemes.get("acme").scan(
             "text H text",
             output_format="banner",
             input_format="portion",
@@ -469,46 +469,38 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
     ),
     "scheme.render": (
         "scheme/render",
-        lambda c: c.scheme.render(
+        lambda c: c.schemes.get("acme").render(
             [_LEVEL], output_format="banner", preservation="full"
-        ),
-    ),
-    "scheme.normalize": (
-        "scheme/normalize",
-        lambda c: c.scheme.normalize(
-            "h", output_format="banner", input_format="portion"
         ),
     ),
     "scheme.check-coverage": (
         "scheme/check-coverage",
-        lambda c: c.scheme.check_coverage(
+        lambda c: c.schemes.get("acme").check_coverage(
             ["L"], "H", output_format="banner", input_format="portion"
         ),
     ),
     "scheme.diff": (
         "scheme/diff",
-        lambda c: c.scheme.diff("H", "L", input_format="portion"),
+        lambda c: c.schemes.get("acme").diff("H", "L", input_format="portion"),
     ),
-    "scheme.filter-concepts": (
-        "scheme/filter-concepts",
-        lambda c: c.scheme.filter_concepts("hi"),
+    "scheme.notices": (
+        "scheme/notices",
+        lambda c: c.schemes.get("acme").notices([_LEVEL]),
     ),
-    "scheme.notices": ("scheme/notices", lambda c: c.scheme.notices([_LEVEL])),
-    "scheme.view": ("scheme/view", lambda c: c.scheme.view()),
+    "scheme.view": ("scheme/view", lambda c: c.schemes.get("acme").view()),
     "scheme.apply-preset": (
         "scheme/apply-preset",
-        lambda c: c.scheme.apply_preset("default-label", output_format="banner"),
+        lambda c: c.schemes.get("acme").apply_preset(
+            "default-label", output_format="banner"
+        ),
     ),
     "guide.scan": ("guide/scan", lambda c: c.guide.scan("secret text", guide_id="g1")),
     "guide.evaluate": ("guide/evaluate", lambda c: c.guide.evaluate("g1", "r1")),
-    "guide.evaluate_many": ("guide/evaluate", lambda c: c.guide.evaluate_many("r1")),
-    "guide.filter-rules": (
-        "guide/filter-rules",
-        lambda c: c.guide.filter_rules("sec", guide_id="g1"),
-    ),
-    "guide.describe-rule": (
-        "guide/describe-rule",
-        lambda c: c.guide.describe_rule("r1", guide_id="g1"),
+    "guide.evaluate_many": (
+        "guide/evaluate",
+        lambda c: c.guide.evaluate_many(
+            GuideRuleSelection(guide_id="g1", rule_id="r1")
+        ),
     ),
     "guide.view": ("guide/view", lambda c: c.guide.view(guide_id="g1")),
     "access.check": (
@@ -527,10 +519,6 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
         "access/describe-requirements",
         lambda c: c.access.describe_requirements("H", assertions=[_LEVEL]),
     ),
-    "access.describe-rule": (
-        "access/describe-rule",
-        lambda c: c.access.describe_rule("rule-1"),
-    ),
     "crosswalk.translate-marking": (
         "crosswalk/translate",
         lambda c: c.crosswalk.translate("cw-1", marking="H"),
@@ -543,16 +531,6 @@ CASES: Dict[str, Tuple[str, Callable[[EzClassifyContext], Any]]] = {
         "document/audit",
         lambda c: c.document.audit(
             "document text",
-            guide_determinations=_DETERMINATIONS,
-            response_profile="full",
-        ),
-    ),
-    "document.assess-access": (
-        "document/assess-access",
-        lambda c: c.document.assess_access(
-            "document text",
-            {"clearance": "high"},
-            context={"project": "p1"},
             guide_determinations=_DETERMINATIONS,
             response_profile="full",
         ),
@@ -645,14 +623,22 @@ def test_every_contract_request_property_reaches_the_wire(
 
 
 @pytest.mark.parametrize("case_name", sorted(CASES))
-def test_a_post_sends_no_query_because_the_contract_declares_none(
+def test_a_post_sends_exactly_the_query_the_contract_declares(
     spec: OpenApiRequestSchemas, case_name: str
 ) -> None:
+    """A POST's input is its body; the only query is a scheme view's key.
+
+    The scheme cases go through a view, so the ``scheme`` query the contract
+    declares on every scheme operation reaches the wire, and the other
+    operations declare and send none.
+    """
     route, _ = CASES[case_name]
     request = _send(case_name)
-    assert spec.declared_query("post", _ROUTE_PREFIX + route) == set()
-    assert request.url.query == b"", (
-        f"{case_name} sent query {request.url.query!r}; the server refuses it"
+    declared = spec.declared_query("post", _ROUTE_PREFIX + route)
+    sent = set(request.url.params)
+    assert sent == declared, (
+        f"{case_name} sent query {sorted(sent)}; the contract declares "
+        f"{sorted(declared)} and refuses anything else with a 400"
     )
 
 
@@ -677,37 +663,39 @@ QUERY_CASES: Dict[str, Tuple[str, Callable[[_Harness], Any]]] = {
     "context.describe": ("/v1/ctx/{ctxId}/{version}", lambda h: h.ctx.resolve()),
     "scheme.summary": (
         _ROUTE_PREFIX + "scheme",
-        lambda h: h.ctx.scheme.summary(scheme="acme"),
+        lambda h: h.ctx.schemes.get("acme").summary(),
     ),
     "scheme.concepts": (
         _ROUTE_PREFIX + "scheme/concepts",
-        lambda h: h.ctx.scheme.concepts(scheme="acme"),
+        lambda h: h.ctx.schemes.get("acme").concepts(),
     ),
     "scheme.categories": (
         _ROUTE_PREFIX + "scheme/categories",
-        lambda h: h.ctx.scheme.categories(scheme="acme"),
+        lambda h: h.ctx.schemes.get("acme").categories(),
     ),
     "scheme.formats": (
         _ROUTE_PREFIX + "scheme/formats",
-        lambda h: h.ctx.scheme.formats(scheme="acme"),
-    ),
-    "scheme.grammar": (
-        _ROUTE_PREFIX + "scheme/grammar",
-        lambda h: h.ctx.scheme.grammar(scheme="acme"),
+        lambda h: h.ctx.schemes.get("acme").formats(),
     ),
     "scheme.scopes": (
         _ROUTE_PREFIX + "scheme/scopes",
-        lambda h: h.ctx.scheme.scopes(scheme="acme"),
+        lambda h: h.ctx.schemes.get("acme").scopes(),
     ),
     "scheme.label-presets": (
         _ROUTE_PREFIX + "scheme/label-presets",
-        lambda h: h.ctx.scheme.label_presets(),
+        lambda h: h.ctx.schemes.get("acme").label_presets(),
     ),
     "scheme.describe-concept": (
         _ROUTE_PREFIX + "scheme/describe-concept",
-        lambda h: h.ctx.scheme.describe_concept("HIGH", "level", view="default"),
+        lambda h: h.ctx.schemes.get("acme").describe_concept(
+            "HIGH", "level", view="default"
+        ),
     ),
     "access.rules": (_ROUTE_PREFIX + "access/rules", lambda h: h.ctx.access.rules()),
+    "crosswalk.describe": (
+        _ROUTE_PREFIX + "crosswalk/describe",
+        lambda h: h.ctx.crosswalk.describe(),
+    ),
 }
 
 
@@ -765,34 +753,23 @@ def test_every_read_the_contract_declares_has_a_query_case() -> None:
 
 
 # Negative controls. A gate that cannot fail proves nothing, so pin the two
-# failure modes it exists for: a removed field, and a missing required one.
+# failure modes it exists for: an undeclared field, and a missing required one.
 
 
 @pytest.mark.parametrize(
     ("route", "body", "field"),
     [
-        ("scheme/process", {"input": "H", "format": "banner"}, "format"),
-        ("scheme/process", {"input": "H", "scope": "portion"}, "scope"),
-        ("scheme/validate", {"input": "H", "scope": "portion"}, "scope"),
-        ("scheme/process", {"input": "H", "tolerant": True}, "tolerant"),
-        ("scheme/process", {"input": "H", "normalization": "loose"}, "normalization"),
+        ("scheme/process", {"input": "H", "note": "kept"}, "note"),
+        ("scheme/validate", {"input": "H", "note": "kept"}, "note"),
         ("scheme/explain", {"input": "H", "outputs": ["banner"]}, "outputs"),
         ("scheme/explain", {"input": "H", "suggestFor": ["level"]}, "suggestFor"),
-        ("scheme/suggest", {"input": "H", "format": "banner"}, "format"),
-        (
-            "scheme/aggregate",
-            {"inputs": ["H"], "format": "banner", "scope": "portion"},
-            "format",
-        ),
-        (
-            "scheme/aggregate",
-            {"assertionSets": [], "format": "banner"},
-            "format",
-        ),
-        ("scheme/diff", {"a": "H", "b": "L", "format": "banner"}, "format"),
+        ("scheme/suggest", {"input": "H", "note": "kept"}, "note"),
+        ("scheme/aggregate", {"inputs": ["H"], "note": "kept"}, "note"),
+        ("scheme/aggregate", {"assertionSets": [], "note": "kept"}, "note"),
+        ("scheme/diff", {"a": "H", "b": "L", "note": "kept"}, "note"),
     ],
 )
-def test_validator_rejects_removed_fields(
+def test_validator_rejects_an_undeclared_field(
     spec: OpenApiRequestSchemas, route: str, body: Dict[str, Any], field: str
 ) -> None:
     errors = spec.validate("post", _ROUTE_PREFIX + route, body)
@@ -824,7 +801,7 @@ def test_validator_rejects_missing_required_field_and_wrong_type(
     assert wrong_type
 
 
-def test_validator_accepts_the_renamed_fields(spec: OpenApiRequestSchemas) -> None:
+def test_validator_accepts_a_current_body(spec: OpenApiRequestSchemas) -> None:
     errors = spec.validate(
         "post",
         _ROUTE_PREFIX + "scheme/process",

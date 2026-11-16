@@ -7,7 +7,7 @@ Two operating modes are supported, selected by the ``--mcp`` flag or the
 
     python3 -m main --file sample.txt --mcp
 
-Spawns the ``@ezclassify/mcp`` server as a subprocess and drives the MCP
+Spawns the ``ezclassify-mcp`` runtime binary as a subprocess and drives the MCP
 tool-use sequence directly (audit_document_markings → aggregate_markings).
 The MCP runtime must be licensed and configured with its signed content bundle.
 No LLM API key is required; the orchestration is deterministic.
@@ -16,10 +16,12 @@ No LLM API key is required; the orchestration is deterministic.
 
     python3 -m main --server https://runtime.example.com --context cedar-valley --file sample.txt
 
-Connects to a running EzClassify runtime that serves the Context. This example
-audits arbitrary document text, which the Cedar Valley replay server has no
-recording for, so it needs a real runtime. ``--server`` defaults to
-``http://localhost:3000``, where a runtime started on your machine listens.
+Connects to a running EzClassify runtime that serves the Context. The free
+developer runtime serves ``cedar-valley`` with no credentials::
+
+    docker run --rm -p 3000:8080 ghcr.io/ezclassify/developer-runtime
+
+``--server`` defaults to ``http://localhost:3000``, where that container listens.
 
 Environment variables
 ---------------------
@@ -28,7 +30,7 @@ EZCLASSIFY_ACCESS_TOKEN   caller identity token, if the runtime requires one
 EZCLASSIFY_CONTEXT_TOKEN  signed Context token, if the runtime requires one
 EZCLASSIFY_CONTEXT_ID  published Context ID (default: cedar-valley)
 EZCLASSIFY_CONTEXT_VERSION  published Context version (default: the server's choice)
-MCP_SERVER_PATH       path to @ezclassify/mcp dist/index.js (auto-detected)
+MCP_SERVER_PATH       path to the ezclassify-mcp binary (default: the one on PATH)
 """
 
 from __future__ import annotations

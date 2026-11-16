@@ -1,11 +1,11 @@
 # <img src="assets/icon.svg" alt="" width="32"> EzClassify Python SDK
 
-[![CI](https://github.com/ezclassify/client-python/actions/workflows/ci.yml/badge.svg)](https://github.com/ezclassify/client-python/actions/workflows/ci.yml)
+[![CI](https://github.com/ezclassify/sdk-python/actions/workflows/ci.yml/badge.svg)](https://github.com/ezclassify/sdk-python/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/ezclassify-rest-client?label=ezclassify-rest-client)](https://pypi.org/project/ezclassify-rest-client/)
 [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://pypi.org/project/ezclassify-rest-client/)
 
-Apache-licensed HTTP client for a licensed EzClassify REST runtime. It contains wire models and client ergonomics, not the proprietary engine or enterprise content. Two PyPI packages are provided: `ezclassify-rest-contract` and `ezclassify-rest-client`.
+Apache-licensed HTTP client for a licensed EzClassify REST runtime. It contains wire models and client ergonomics, not the proprietary engine or enterprise content. One PyPI package is provided: `ezclassify-rest-client`, which carries both the client and the wire models.
 
 The [ezclassify/contracts](https://github.com/ezclassify/contracts) repository owns
 document and wire types; EzClassify Runtime owns
@@ -24,17 +24,16 @@ isolated from system packages.
 pip install ezclassify-rest-client
 ```
 
-That pulls in `ezclassify-rest-contract` as a dependency. Python 3.11+. The SDK ships client-only: use `EzClassifyClient` against a running REST API server.
+Python 3.11+. The SDK ships client-only: use `EzClassifyClient` against a running REST API server.
 
 ## Quickstart
 
-Start with the Cedar Valley replay server. It answers recorded requests for a
-fictional school-district Context, so you can see your integration work before
-you have a runtime, a license, or credentials. Node.js 22 or newer is needed
-for the replay server only; your application stays Python.
+Start with the free developer runtime. It is one container that serves the
+built-in Contexts, such as `capco-demo` and `cedar-valley`, over real HTTP, with
+no license, credentials or account. Your application stays Python.
 
 ```sh
-npx @ezclassify/conformance-server --scenario cedar-valley --port 4010
+docker run --rm -p 3000:8080 ghcr.io/ezclassify/developer-runtime
 ```
 
 Then connect the normal client to it:
@@ -43,7 +42,7 @@ Then connect the normal client to it:
 from ezclassify_rest_client import connect_context
 
 with connect_context(
-    "http://127.0.0.1:4010", context_id="cedar-valley", context_version="1.0.0"
+    "http://localhost:3000", context_id="cedar-valley", context_version="1.0.0"
 ) as ctx:
     marking = ctx.scheme.process("INTERNAL").result
     print(marking.rendered, marking.valid)
@@ -63,19 +62,15 @@ granted: False
   Recipient organization: False
 ```
 
-The server replays recordings, so it only knows a finite set of requests:
-Context `cedar-valley` version `1.0.0`, and inputs such as `PUBLIC`, `INTERNAL`
-and `CONFIDENTIAL`. The
-[scenario catalog](https://github.com/ezclassify/contracts/tree/main/packages/conformance-server/scenarios/cedar-valley#readme)
-lists every supported request. Anything else gets a 501 diagnostic instead of an
-invented answer. It requires no credentials by default; add `--auth simulated`
-to test how your code handles a missing or wrong credential.
+`cedar-valley` is a fictional school district policy for teaching, so use
+synthetic markings with it. `GET /v1/ctx` on the runtime lists every built-in
+Context.
 
 ### Swap to your runtime
 
-Change the base URL and add real credentials. The calls stay the same. Obtain
-the REST endpoint and credentials from your EzClassify runtime administrator.
-A secured deployment reads the caller identity from `access_token` and Context
+The calls stay the same. Four values change: the base URL, the Context, your
+application id and the caller token. Obtain them from your EzClassify runtime
+administrator. A secured deployment reads the caller identity from `access_token` and Context
 authorization from `context_token`; leave either out when the deployment does
 not require it.
 
@@ -108,39 +103,32 @@ version to let the server choose: the context token's default, or the newest
 published. Pass one, such as `"1.0.0"`, to pin it. The concrete Context version
 resolved by the server is on `ctx.resolved_version`.
 Operation groups are `ctx.scheme`, `ctx.guide`, `ctx.access`, `ctx.document`,
-and `ctx.crosswalk`. There is intentionally no loose scheme-addressed mode.
+and `ctx.crosswalk`. `ctx.scheme` is the Context's primary scheme;
+`ctx.schemes.get(key)` is any other scheme the Context holds. There is
+intentionally no loose scheme-addressed mode.
 
-### Managed application credentials
+### Naming your application
 
-When your administrator supplies an application credential, pass it through
-`headers`. When its user policy requires a bearer token, also supply the
-current user's token from your application's identity provider:
+Pass the id your application is registered under in Studio as `application_id`.
+The runtime counts requests per application and reports usage to Studio. The id
+is not a credential and authorizes nothing; a request without one, or with an id
+the deployment has not registered, is served the same way.
 
 ```python
 with EzClassifyClient(
     "https://runtime.example.com",
-    headers={
-        "X-EzClassify-Application-Grant": os.environ[
-            "EZCLASSIFY_APPLICATION_CREDENTIAL"
-        ]
-    },
-    credentials=RestClientCredentials(access_token=current_user_access_token),
+    application_id="case-intake-portal",
 ) as deployment:
     with deployment.context("cedar-valley") as ctx:
         print(ctx.describe().version)
 ```
 
-The client sends the opaque value unchanged on Context routes and omits it
-from health probes. Runtime verifies the credential and its current application
-permissions. Omit `credentials` when the application's policy does not use a
-bearer token. Keep each client and its caches scoped to one caller; the SDK
-does not sign users in. Combining a grant with a Context token or an explicit
-Authorization header, duplicate application headers, blank values, control
-characters or surrounding whitespace raises `ValueError` before a connection
-is created. Redirects are refused rather than followed. Runtime execution
-requires an authorized application definition and its configured proof, also
-for ordinary caller credentials; an application identifier alone grants no
-access. Protected standalone configuration works without Studio.
+The client sends it as the `x-ezclassify-application-id` header on Context
+routes and omits it from health probes. An id is 1 to 128 printable ASCII characters (`!` to `~`, no spaces); anything
+else raises `ValueError` naming the rule before a connection is created.
+`connect_context` takes the same option. When a user bearer is required, supply
+it through `RestClientCredentials(access_token=...)`; the SDK does not sign
+users in.
 
 ## API surface
 
@@ -153,7 +141,7 @@ access. Protected standalone configuration works without Studio.
 | access check / requirements / rules | `ctx.access.*` |
 | guide scan / evaluate / rules | `ctx.guide.*` |
 | document audit / access assessment | `ctx.document.*` |
-| directional translation | `ctx.crosswalk.translate(...)` |
+| directional translation, and the crosswalks the Context holds | `ctx.crosswalk.translate(...)`, `ctx.crosswalk.describe()` |
 
 ### Reading a marking and writing one
 
@@ -202,8 +190,8 @@ only accompanies text, on both `suggest` and `validate`; fact inputs accept
 options = ctx.scheme.suggest(assertions=[], surface="classification").result
 ```
 
-Assertion `source` is an open string. The SDK forwards custom labels, values,
-metadata and provenance without assigning meaning to them. Core processing
+Assertion `source` is an open string. The SDK forwards custom labels without
+assigning meaning to them. Core processing
 recognizes `infer`, `default`, `context`, and `repair` with `source_rule` as
 previously derived facts; other labels, including `parse`, `user` and `stated`,
 remain authored input. The engine owns settling and derivation.
@@ -220,7 +208,9 @@ output, so they take `output_format` alone.
   id of a form exactly one view names. Leave it out and you get the scheme's
   default. For a scheme that declares surfaces, that is each surface's default
   view for the marking's role, so a part and a whole can come back in
-  different views.
+  different views, unless one default writes every other surface's scope
+  beside its own, which is then written alone. An output you name is always
+  written alone.
 - `input_format` says what the text is read as: a format id, or a view id, a
   `surface/view` address or one of a view's forms. Leave it out and
   recognition works it out. `recognition["inputFormat"]` reports what the text
@@ -291,9 +281,9 @@ SDK `major.minor` tracks the rest-api `major.minor`; patch versions may drift. `
 Runnable examples live in [`examples/`](examples/). The
 [`llm-classify`](examples/llm-classify/) demo audits a document with the
 `audit_document_markings` and `aggregate_markings` sequence and prints a
-classification report. It sends arbitrary document text, which the Cedar Valley
-replay server has no recording for, so it needs a runtime that serves the
-`cedar-valley` Context. Point it at yours and supply the credentials your
+classification report. It runs against the developer runtime from the
+[Quickstart](#quickstart) or against your own runtime that serves the
+`cedar-valley` Context. For your own runtime, supply the credentials your
 administrator issued:
 
 ```sh
@@ -304,21 +294,22 @@ python3 -m main --server https://runtime.example.com --file sample.txt
 ```
 
 Leave the tokens out if your runtime asks for none. Add `--mcp` to spawn a
-licensed, content-configured `@ezclassify/mcp` runtime instead. The example's
+licensed, content-configured `ezclassify-mcp` runtime binary instead. The example's
 README shows the report and both modes.
 
 ## Integration testing
 
-The replay server from the [Quickstart](#quickstart) also exercises your error
-handling. Your code decides what to log and when to retry; the recordings let you
-check that without a runtime.
+The developer runtime from the [Quickstart](#quickstart) also evaluates access
+decisions, so you can check connectivity, response handling and decision
+logging without a licensed runtime. Your code decides what to log and when to
+retry.
 
 ```python
 from ezclassify_rest_client import connect_context, EzClassifyClientError
 
 try:
     with connect_context(
-        "http://127.0.0.1:4010", context_id="cedar-valley", context_version="1.0.0"
+        "http://localhost:3000", context_id="cedar-valley", context_version="1.0.0"
     ) as ctx:
         decision = ctx.access.check_by_marking("CONFIDENTIAL", {}).result
         print(

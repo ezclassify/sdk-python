@@ -1,25 +1,25 @@
 {
   "openapiVersion": "1.0.0-dev.30",
-  "openapiSha256": "cf1679c6bae46071cec779c7864802568a3f517aea6b3cc7a2a634de512c6e61",
-  "specBundleSha256": "28b76ee0c0525b0962eadf31ab9eb91a1ea92fe892e75ba0127acb41a04cc0c5",
-  "specDigest": "6147143891dad12cd371f83d3ce5fcf6de796f58d66d91b98f39e587ff9de399",
-  "contractsSha": "8fb77d1299f537cfe13d50eb26b41ff4bc881766",
+  "openapiSha256": "5b10dd61da6005025820a3e39c406756e2a7c280db6e16f1325c289fa6217353",
+  "specBundleSha256": "a1bdfc3b23ebb435defc8a3c653cf6d67e06eff2355a56102f27ea7a901bffb0",
+  "specDigest": "53e6a026ef2ebb0689e1abfb7928dc3e436d93acb943312a59cc1704eeb637c1",
+  "contractsSha": "efd69569397aaa3ad99b87df03121f2e233dd2e1",
   "sourcePackages": {
     "@ezclassify/openapi": "1.0.0-dev.30",
     "@ezclassify/schemas": "1.0.0-dev.30",
     "@ezclassify/conformance": "1.0.0-dev.30"
   },
-  "generatedAt": "2026-11-03T16:15:23.000Z",
+  "generatedAt": "2026-11-15T21:50:55.000Z",
   "generators": {
     "python": {
       "binary": "node",
       "script": "scripts/gen.mjs",
       "version": "node",
-      "sha256": "fa84891439e6a8510cd9d73c0270e3fd6270491c39a6b4a9f52871f0b8fb8bf4",
+      "sha256": "673a3cda7d011c8e637e31fba2e4facf5a3a0b088aa57a99081e309572ca69d5",
       "additionalInputs": [
         {
           "path": "scripts/gen_models.py",
-          "sha256": "0dc6627b7f0eb0090397b53637b140fdbdca5b8b99d2c79f6c00503bf99f4f02"
+          "sha256": "fce8b5b8016e04ed4f14febeaf83001c8df1390f0a0b062f9ffacfcd87de8112"
         },
         {
           "path": "tools/requirements-regen.txt",
@@ -27,10 +27,10 @@
         }
       ],
       "note": "sha256 is of scripts/gen.mjs; additionalInputs pins its Python implementation and native regeneration dependency requirements",
-      "jsonSchemasSha256": "a6e48772d5f835151c6a63811b2addd81197e6a4d2f7199837a3ac9290ebb3c1"
+      "jsonSchemasSha256": "7acf4ec48e8b4d2ffbf1cb843c2c0cf2103b9f3c126f3d89f8cb0b018f36a1f5"
     }
   },
   "generatedPaths": [
-    "types/ezclassify_rest_contract/models.py"
+    "client/ezclassify_rest_client/models.py"
   ]
 }

@@ -16,9 +16,8 @@ from typing import Any, NamedTuple
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "types/ezclassify_rest_contract/models.py"
+OUT = ROOT / "client/ezclassify_rest_client/models.py"
 
 # Column limit for generated docstrings. models.py is excluded from
 # `ruff format` (see the root pyproject) because regen freshness requires it to
@@ -34,10 +33,7 @@ DOCSTRING_WIDTH = 88
 # surface.
 MODEL_ORDER = [
     "Confidence",
-    "Attribution",
     "ArtifactReference",
-    "SourceReference",
-    "RuleSourceReference",
     "RuleReference",
     "AssertionReference",
     "AccessOperand",
@@ -62,6 +58,7 @@ MODEL_ORDER = [
     "DiffResult",
     "ScanMatch",
     "ScanLimits",
+    "UnreadMark",
     "ScanResponseBody",
     "AccessRuleResult",
     "AccessDecision",
@@ -72,11 +69,8 @@ MODEL_ORDER = [
     "EvaluationResult",
     "CoverageReport",
     "ConceptDescription",
-    "FilterCount",
-    "FilterResult",
     "Notice",
     "SuggestResult",
-    "RuleDescription",
     "AccessRuleDescription",
     "AccessRequirementsDescription",
     "ConceptView",
@@ -92,7 +86,6 @@ MODEL_ORDER = [
     "SchemeSummary",
     "CategoryView",
     "FormatView",
-    "SchemeGrammar",
     "LabelPresetView",
     "SchemeScope",
     "DocumentAuditReport",
@@ -104,6 +97,7 @@ MODEL_ORDER = [
     "ManualGuideSelectionInput",
     "ManualGuideSelection",
     "GuideDeterminationInput",
+    "GuideRuleSelection",
     "GuideFactReference",
     "AssertionSupport",
     "GuideCompiledDetail",
@@ -114,13 +108,7 @@ MODEL_ORDER = [
     "DocumentGuideAssessment",
     "DocumentResponseCounts",
     "DocumentResponseProjection",
-    "EffectiveDocumentTarget",
-    "ContentChangeRequirement",
-    "SubjectContextRequirement",
-    "AccessScenarioAssessment",
-    "DocumentAccessAssessment",
     "RenderResponse",
-    "NormalizeResponse",
     "ContextSchemeProcessResult",
     "ContextSchemeValidateResult",
     "ContextSchemeExplainResult",
@@ -129,21 +117,16 @@ MODEL_ORDER = [
     "ContextSchemeAggregateResult",
     "ContextSchemeScanResult",
     "ContextSchemeRenderResult",
-    "ContextSchemeNormalizeResult",
     "ContextSchemeCoverageResult",
     "ContextSchemeConceptDescriptionResult",
     "ContextSchemeDiffResult",
-    "ContextSchemeFilterConceptsResult",
     "ContextSchemeNoticesResult",
     "ContextSchemeViewResult",
     "ContextGuideScanResult",
     "ContextGuideEvaluationResult",
-    "ContextGuideFilterRulesResult",
-    "ContextGuideRuleDescriptionResult",
     "ContextGuideViewResult",
     "ContextAccessDecisionResult",
     "ContextAccessRequirementsResult",
-    "ContextAccessRuleDescriptionResult",
     "CtxAccessRulesResponseBody",
     "_HealthResponse",
     "_CtxListResponseBody",
@@ -152,8 +135,8 @@ MODEL_ORDER = [
     "ContextSchemeDescriptor",
     "ContextDescription",
     "ContextCrosswalkTranslationResult",
+    "CtxCrosswalkDescribeResponseBody",
     "ContextDocumentAuditResult",
-    "ContextDocumentAccessAssessmentResult",
 ]
 
 JSON_TOP = {
@@ -194,8 +177,6 @@ REF_RENAMES = {
 }
 
 BASE_MIXINS = {
-    "SourceReference": "_SourceIdentityMixin",
-    "RuleSourceReference": "_SourceIdentityMixin",
     "ContextDescription": "_ContextDescriptionMixin",
 }
 
@@ -243,7 +224,6 @@ CLOSED_ON_CONSTRUCTION = {"Assertion"}
 # value is (document kind, root schema name, property path within it).
 INLINE_SOURCES = {
     "Confidence": ("json", "assertion", ("properties", "confidence")),
-    "FilterCount": ("openapi", "FilterResult", ("properties", "total")),
     "AuditWhole": ("openapi", "DocumentAuditReport", ("properties", "wholes", "items")),
     "AuditPart": ("openapi", "DocumentAuditReport", ("properties", "parts", "items")),
     # Was its own component until the contract inlined it.  Pointing at the
@@ -275,8 +255,6 @@ COMPONENT_SOURCES = {
 DEFINITION_SOURCES = {"GuideRule", "FixConceptReference"}
 
 INLINE_TYPES = {
-    ("FilterResult", "categoryCounts"): "Dict[str, FilterCount]",
-    ("FilterResult", "total"): "FilterCount",
     ("DocumentAuditReport", "wholes"): "List[AuditWhole]",
     ("DocumentAuditReport", "parts"): "List[AuditPart]",
 }
@@ -299,14 +277,6 @@ class EnumOverride(NamedTuple):
 # retaining that ergonomic boundary avoids exporting dozens of incidental
 # authoring types while the surrounding wire model remains generated.
 TYPE_OVERRIDES: dict[tuple[str, str], str | EnumOverride] = {
-    # The discriminator of the reproducible and best-effort source variants,
-    # which merge_object_union folds into one model.
-    ("SourceReference", "reproducibility"): EnumOverride(
-        "Literal['reproducible', 'best-effort']"
-    ),
-    ("RuleSourceReference", "reproducibility"): EnumOverride(
-        "Literal['reproducible', 'best-effort']"
-    ),
     ("Assertion", "confidence"): EnumOverride("Confidence"),
     ("GuideRule", "match"): "Optional[List[Dict[str, Any]]]",
     ("GuideRule", "outcome"): "Dict[str, Any]",
@@ -338,6 +308,10 @@ TYPE_OVERRIDES: dict[tuple[str, str], str | EnumOverride] = {
     # typed while preserving the complete union payload as JSON until this
     # deliberately small generator supports named union variants.
     ("ContextCrosswalkTranslationResult", "result"): "Dict[str, Any]",
+    # Each crosswalk's mappings and selections carry the same union-shaped
+    # reviewed decisions as a translation, so the inventory keeps each entry
+    # as JSON on the same terms.
+    ("CtxCrosswalkDescribeResponseBody", "crosswalks"): "List[Dict[str, Any]]",
 }
 
 
@@ -736,7 +710,7 @@ class Generator:
                 "decides it. A schema the contract dropped or renamed is "
                 "repaired upstream in ezclassify/contracts or by pointing the "
                 "table at its new location — never by hand-editing "
-                "types/ezclassify_rest_contract/models.py."
+                "client/ezclassify_rest_client/models.py."
             )
 
     def resolve_schema_ref(self, schema: dict[str, Any]) -> dict[str, Any]:

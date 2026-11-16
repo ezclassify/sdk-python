@@ -1,9 +1,9 @@
-"""Tests for ezclassify-rest-contract Pydantic models."""
+"""Tests for the ezclassify-rest-client wire models."""
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
 
-from ezclassify_rest_contract import (
+from ezclassify_rest_client import (
     AccessDecision,
     AccessRuleResult,
     AggregateResult,
@@ -87,13 +87,12 @@ class TestAssertion:
                 "categoryId": "level",
                 "confidence": "certain",
                 "source": "parse",
-                "value": "A&B",
             }
         )
         assert a.concept_id == "LEVEL_HIGH"
         assert a.category_id == "level"
         assert a.confidence == "certain"
-        assert a.value == "A&B"
+        assert a.source == "parse"
 
     def test_from_dict_minimal(self):
         a = Assertion.from_dict(
@@ -104,8 +103,7 @@ class TestAssertion:
                 "source": "infer",
             }
         )
-        assert a.expires_at is None
-        assert a.value is None
+        assert a.replaced_concept_id is None
 
     def test_model_validate_round_trip(self):
         data = {
@@ -128,7 +126,6 @@ class TestValidationError:
 
     def test_optional_fields_default_none(self):
         e = ValidationError.from_dict({"constraintId": "C1", "message": "err"})
-        assert e.severity is None
         assert e.category_id is None
 
 
@@ -166,7 +163,6 @@ class TestValidateResult:
             "proposed_fixes",
             "renders",
             "suggestions_for",
-            "assertions_before_repair",
         }
 
     @pytest.mark.parametrize("verdict", ["valid", "inputWasValid"])
@@ -210,7 +206,7 @@ class TestVerdictsAreDecodedStrictly:
     @pytest.mark.parametrize("value", ["true", 1])
     def test_an_access_grant_that_is_not_a_boolean_is_refused(self, value):
         with pytest.raises(PydanticValidationError):
-            AccessDecision.from_dict({"granted": value, "rules": []})
+            AccessDecision.from_dict({"granted": value, "rules": [], "warnings": []})
 
     def test_a_boolean_verdict_decodes_as_sent(self):
         r = ValidateResult.from_dict({**self._VALIDATE, "valid": False})
@@ -237,7 +233,6 @@ class TestExplanationTrace:
                     {
                         "ruleId": "upper-case",
                         "description": "Writes the level in capitals.",
-                        "confidence": "safe",
                         "before": "high",
                         "after": "HIGH",
                         "cosmetic": True,
@@ -275,11 +270,7 @@ class TestExplanationTrace:
         assert entry.concept_name is None
         repair = trace.repairs[0]
         assert isinstance(repair, TraceRepair)
-        assert (repair.before, repair.after, repair.confidence) == (
-            "high",
-            "HIGH",
-            "safe",
-        )
+        assert (repair.before, repair.after) == ("high", "HIGH")
         issue = trace.validation_errors[0]
         assert isinstance(issue, TraceValidationIssue)
         assert issue.constraint_id == "needs-staff"
@@ -295,8 +286,8 @@ class TestExplanationTrace:
             ("entries", {"stage": "parse", "action": "read"}, "detail"),
             (
                 "repairs",
-                {"ruleId": "r", "description": "d", "before": "a", "after": "A"},
-                "confidence",
+                {"ruleId": "r", "description": "d", "before": "a"},
+                "after",
             ),
             ("validationErrors", {"constraintId": "c"}, "message"),
             ("inferences", {"ruleId": "r", "conceptId": "c"}, "explanation"),
@@ -399,7 +390,6 @@ class TestProcessResult:
                 field.is_required(),
             ), name
         assert set(ProcessResult.model_fields) - set(ValidateResult.model_fields) == {
-            "assertions_before_repair",
             "proposed_fixes",
             "renders",
             "suggestions_for",
@@ -566,7 +556,7 @@ class TestAccessModels:
             )
 
     def test_access_decision(self):
-        d = AccessDecision.from_dict({"granted": True, "rules": []})
+        d = AccessDecision.from_dict({"granted": True, "rules": [], "warnings": []})
         assert d.granted is True
         assert d.rules == []
 
@@ -610,15 +600,21 @@ class TestGuideModels:
         assert r.rule.id == "pii-rule"
         assert len(r.spans) == 1
 
-    def test_guide_scan_result_allows_omitted_optional_guide_id(self):
-        r = GuideScanResult.from_dict(
-            {
-                "matchedKeywords": [],
-                "rule": {"id": "r1", "name": "Rule", "outcome": {}},
-                "spans": [],
-            }
-        )
-        assert r.guide_id is None
+    def test_guide_scan_result_must_name_its_guide(self):
+        with pytest.raises(PydanticValidationError) as failure:
+            GuideScanResult.from_dict(
+                {
+                    "matchedKeywords": [],
+                    "rule": {
+                        "id": "r1",
+                        "name": "Rule",
+                        "keywords": [],
+                        "outcome": {"rendered": "HIGH"},
+                    },
+                    "spans": [],
+                }
+            )
+        assert failure.value.errors()[0]["loc"] == ("guideId",)
 
     def test_evaluation_result(self):
         e = EvaluationResult.from_dict(
