@@ -55,9 +55,8 @@ reviewed API change committed alongside that change.
 - **The spec is vendored, not authored here.** The Pydantic models in
   `ezclassify-rest-client` track the OpenAPI spec under [`vendor/spec/`](vendor/spec/). That
   mirror is written exclusively by the EzClassify spec bot from
-  [ezclassify/contracts](https://github.com/ezclassify/contracts), landing as `ezclassify-spec-bot`;
-  `vendor-readonly.yml` rejects a [`vendor/spec/`](vendor/spec/) commit from anyone else. There
-  is no local target that refreshes it.
+  [ezclassify/contracts](https://github.com/ezclassify/contracts), landing as `ezclassify-spec-bot`.
+  There is no local target that refreshes it.
   `make regen` writes the shipped `models.py` directly from both the OpenAPI
   components and canonical JSON Schemas. CI regenerates that production file
   and fails on any diff. Python-only parsing ergonomics and cross-field checks

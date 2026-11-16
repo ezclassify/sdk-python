@@ -55,8 +55,6 @@ select = ["E4", "E7", "E9", "F", "S", "BLE", "RUF100"]
 # The e2e suite runs the example CLI as a subprocess with arguments it builds
 # itself; driving the real process is the behavior under test.
 "examples/llm-classify/tests/live/test_e2e.py" = ["S603"]
-# The vendor gate shells out to git to read commit identity and history.
-"tests/test_vendor_gate.py" = ["S603", "S607"]
 # The quarantine gate tests run the gate script as a subprocess against a local stand-in registry.
 "tests/test_dependency_age.py" = ["S603"]
 # The replay suites open file: URLs naming cases in the vendored corpus.

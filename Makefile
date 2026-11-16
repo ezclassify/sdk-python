@@ -8,11 +8,9 @@ PYTEST := $(VENV)/bin/pytest
 
 # There is deliberately no local re-vendor target. vendor/spec/ is bot-owned:
 # the bundle is mirrored out of ezclassify/contracts by the spec bot and lands
-# as ezclassify-spec-bot. .github/workflows/vendor-readonly.yml rejects a
-# vendor/spec/ commit from any other identity, and
-# client/tests/test_generation_boundary.py rejects a manifest without real
-# upstream provenance. To advance the spec, update contracts and let the spec
-# bot propagate it, then run `make regen`.
+# as ezclassify-spec-bot. client/tests/test_generation_boundary.py rejects a
+# manifest without real upstream provenance. To advance the spec, update
+# contracts and let the spec bot propagate it, then run `make regen`.
 regen:
 	$(PYTHON) -m venv "$(REGEN_VENV)"
 	$(REGEN_VENV)/bin/pip install -q -r tools/requirements-regen.txt
@@ -56,7 +54,7 @@ lint:
 
 # typecheck: mypy --strict over the published, py.typed package
 #   (config in the root pyproject.toml [tool.mypy] table). CI runs the same
-#   gate in the checks job; the version pin here matches it.
+#   gate in the ci job; the version pin here matches it.
 typecheck:
 	$(PYTHON) -m venv "$(VENV)"
 	$(PIP) install -e client -q
