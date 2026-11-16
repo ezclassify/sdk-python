@@ -9,8 +9,8 @@ PYTEST := $(VENV)/bin/pytest
 # There is deliberately no local re-vendor target. vendor/spec/ is bot-owned:
 # the bundle is mirrored out of ezclassify/contracts by the spec bot and lands
 # as ezclassify-spec-bot. client/tests/test_generation_boundary.py rejects a
-# manifest without real upstream provenance. To advance the spec, update contracts and let the spec
-# bot propagate it, then run `make regen`.
+# manifest without real upstream provenance. To advance the spec, update
+# contracts and let the spec bot propagate it, then run `make regen`.
 regen:
 	$(PYTHON) -m venv "$(REGEN_VENV)"
 	$(REGEN_VENV)/bin/pip install -q -r tools/requirements-regen.txt
