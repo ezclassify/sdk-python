@@ -20,14 +20,18 @@ def main():
         failed = True
         unraisable_hook(args)
 
-    with patch.object(threading, "excepthook", thread_failed), patch.object(
-        sys, "unraisablehook", cleanup_failed
+    with (
+        patch.object(threading, "excepthook", thread_failed),
+        patch.object(sys, "unraisablehook", cleanup_failed),
     ):
         result = unittest.main(module=None, exit=False).result
         gc.collect()
 
     if failed:
-        print("Unexpected exception in a background thread or during cleanup.", file=sys.stderr)
+        print(
+            "Unexpected exception in a background thread or during cleanup.",
+            file=sys.stderr,
+        )
     return 0 if result.wasSuccessful() and not failed else 1
 
 
