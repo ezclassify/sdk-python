@@ -27,6 +27,10 @@ dev = ["pytest>=9.1", "pytest-cov>=7.1", "PyYAML>=6.0.3"]
 include = ["ezclassify*"]
 
 [tool.pytest.ini_options]
+filterwarnings = [
+    "error::pytest.PytestUnhandledThreadExceptionWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
 testpaths = ["tests"]
 norecursedirs = ["live"]
 addopts = "--cov=ezclassify --cov-report=term-missing --import-mode=importlib"

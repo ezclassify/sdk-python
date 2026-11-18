@@ -99,7 +99,7 @@ test-mcp-live:
 # Pure helper tests for the explicit Python-backed live conformance lane.
 .PHONY: test-conformance-runner
 test-conformance-runner:
-	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p test_conformance_server.py
+	PYTHONDONTWRITEBYTECODE=1 python3 scripts/run-unittest.py discover -s scripts -p test_conformance_server.py
 
 # Stdlib pydoc imports the editable local packages without making API requests.
 # Install it first with .venv/bin/pip install -e client.
