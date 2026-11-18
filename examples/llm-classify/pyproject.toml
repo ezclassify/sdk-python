@@ -1,4 +1,8 @@
 [tool.pytest.ini_options]
+filterwarnings = [
+    "error::pytest.PytestUnhandledThreadExceptionWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
 addopts = ""
 
 norecursedirs = ["live"]

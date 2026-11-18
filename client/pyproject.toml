@@ -57,5 +57,9 @@ include = [
 ]
 
 [tool.pytest.ini_options]
+filterwarnings = [
+    "error::pytest.PytestUnhandledThreadExceptionWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
 testpaths = ["tests"]
 addopts = "--cov=ezclassify_rest_client --cov-report=term-missing"
