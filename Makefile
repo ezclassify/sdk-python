@@ -4,6 +4,7 @@ PYTHON ?= python3
 VENV := .venv
 REGEN_VENV := .regen-venv
 PIP := $(VENV)/bin/pip
+REGEN_PIP := $(REGEN_VENV)/bin/pip
 PYTEST := $(VENV)/bin/pytest
 
 # There is deliberately no local re-vendor target. vendor/spec/ is bot-owned:
@@ -13,7 +14,7 @@ PYTEST := $(VENV)/bin/pytest
 # contracts and let the spec bot propagate it, then run `make regen`.
 regen:
 	$(PYTHON) -m venv "$(REGEN_VENV)"
-	$(REGEN_VENV)/bin/pip install -q -r tools/requirements-regen.txt
+	$(REGEN_PIP) install -q -r tools/requirements-regen.txt
 	REGEN_PYTHON=$(REGEN_VENV)/bin/python node scripts/gen.mjs vendor/spec
 	@echo "Regenerated shipped client/ezclassify_rest_client/models.py"
 

@@ -26,6 +26,7 @@ env:
   # then verify what was actually installed against the registry and fail
   # closed, so a pip that ignores this setting cannot slip a fresh upload in.
   PIP_UPLOADED_PRIOR_TO: P7D
+  CI_PIP_VERSION: "26.2.1"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -82,28 +83,31 @@ jobs:
       # One environment for the CI tools, the package and its test tools, and
       # a clean venv holding the published package alone: that venv is the
       # production closure the license check inspects.
+      - name: Set up the quarantine-aware pip resolver
+        run: python -m pip install --quiet --disable-pip-version-check "pip==${CI_PIP_VERSION}"
+
       - name: Install the CI tools, the package and its test tools
         run: |
-          pip install --quiet mypy==2.4.0 pip-licenses==5.5.5 -e "client[dev]" -e ".[dev]"
+          python -m pip install --quiet mypy==2.4.0 pip-licenses==5.5.5 -e "client[dev]" -e ".[dev]"
           python -m venv "$RUNNER_TEMP/prod-closure"
-          "$RUNNER_TEMP/prod-closure/bin/pip" install --quiet ./client
+          python -m pip --python "$RUNNER_TEMP/prod-closure/bin/python" install --quiet ./client
 
       # Quarantine: nothing third-party installed above, nor the generator's
       # pinned requirements, may have been uploaded in the last seven days.
       - name: Dependency age (seven-day quarantine)
         run: |
           pip list --format=freeze > "$RUNNER_TEMP/tools.txt"
-          "$RUNNER_TEMP/prod-closure/bin/pip" list --format=freeze > "$RUNNER_TEMP/closure.txt"
+          python -m pip --python "$RUNNER_TEMP/prod-closure/bin/python" list --format=freeze > "$RUNNER_TEMP/closure.txt"
           python3 scripts/check_dependency_age.py --lockfile "$RUNNER_TEMP/tools.txt" --lockfile "$RUNNER_TEMP/closure.txt" --lockfile tools/requirements-regen.txt
 
       # make lint installs ruff into .venv and runs it in one recipe, so its
       # age check can only follow it.
       - name: Lint and check formatting (ruff)
-        run: make lint
+        run: make lint PIP='python -m pip --python .venv/bin/python'
 
       - name: Dependency age of the lint tools (seven-day quarantine)
         run: |
-          .venv/bin/pip list --format=freeze > "$RUNNER_TEMP/lint-tools.txt"
+          python -m pip --python .venv/bin/python list --format=freeze > "$RUNNER_TEMP/lint-tools.txt"
           python3 scripts/check_dependency_age.py --lockfile "$RUNNER_TEMP/lint-tools.txt"
 
       # The published py.typed annotations are checked in --strict mode
@@ -141,7 +145,7 @@ jobs:
 
       - name: Shipped models match the vendored contracts
         run: |
-          make regen
+          make regen REGEN_PIP='python -m pip --python .regen-venv/bin/python'
           if ! git diff --exit-code -- client/ezclassify_rest_client/models.py; then
             echo "ERROR: Shipped generated models differ from the vendored contracts."
             echo "Run 'make regen' locally and commit models.py."
@@ -195,8 +199,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up the quarantine-aware pip resolver
+        run: python -m pip install --quiet --disable-pip-version-check "pip==${CI_PIP_VERSION}"
+
       - name: Install the package and its test tools
-        run: pip install --quiet -e "client[dev]" -e ".[dev]"
+        run: python -m pip install --quiet -e "client[dev]" -e ".[dev]"
 
       - name: Dependency age of the test tools (seven-day quarantine)
         run: |
@@ -221,7 +228,7 @@ jobs:
         if: ${{ matrix.floor }}
         working-directory: client
         run: |
-          pip install --quiet "pydantic==2.14.1"
+          python -m pip install --quiet "pydantic==2.14.1"
           pip list --format=freeze > "$RUNNER_TEMP/floor.txt"
           python3 ../scripts/check_dependency_age.py --lockfile "$RUNNER_TEMP/floor.txt"
           pytest --no-cov tests/test_wire_fidelity.py -k "ConstructionClosed or UnknownResponse or UnknownRequest"
