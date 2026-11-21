@@ -1,4 +1,4 @@
-# Code generated from vendored contracts@cabcb9594ef91861db01c4a35b5c19c72f2758d784f0a987dbe6ff89064c87cf. DO NOT EDIT.
+# Code generated from vendored contracts@45f708c964bd5fafd386cffcac735708384e1a1423b164b107a5e09fe3d0943e. DO NOT EDIT.
 """Pydantic models generated from EzClassify's vendored OpenAPI and JSON Schemas."""
 
 from __future__ import annotations
@@ -657,6 +657,10 @@ class Suggestion(_WireModel):
     """The category the concept belongs to."""
     concept_id: str = Field(alias='conceptId')
     """The id of the suggested concept."""
+    depth: Optional[int] = None
+    """Zero-based indentation level in the returned browse order. Omitted when the result
+    supplies no hierarchy for the suggestion.
+    """
     description: str
     """Secondary label (longer name or alternate view)."""
     gated: Optional[StrictBool] = None
@@ -673,7 +677,7 @@ class Suggestion(_WireModel):
     name: str
     """Human-readable concept name."""
     order: int
-    """Sort order."""
+    """The concept's authored position."""
     requires: Optional[List[str]] = None
     """When `gated` is true, the unmet prerequisite concept ids that would unlock this
     concept. Empty array when the concept is gated by a constraint with no specific
