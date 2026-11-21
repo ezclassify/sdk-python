@@ -949,6 +949,7 @@ module ezclassify_rest_client.models
     def __init__(self, /, **data: Any) -> None
     category_id: str = Field(alias='categoryId')
     concept_id: str = Field(alias='conceptId')
+    depth: Optional[int] = None
     description: str
     @classmethod def from_dict(cls: type[Self], value: Dict[str, Any]) -> Self
     gated: Optional[StrictBool] = None
