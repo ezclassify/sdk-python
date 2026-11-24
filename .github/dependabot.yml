@@ -26,6 +26,8 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
     ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
       - dependency-name: "ezclassify-rest-*"
     labels: [dependencies]
     allow:
@@ -48,6 +50,9 @@ updates:
         patterns: ["*"]
         update-types: [minor, patch]
     labels: [dependencies, ci]
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     allow:
       - dependency-name: "*"
         update-types:
