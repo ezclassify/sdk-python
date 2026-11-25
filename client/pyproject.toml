@@ -51,6 +51,10 @@ keywords = [
     "marking",
     "library",
     "sdk",
+    "module",
+    "package",
+    "client",
+    "api",
 ]
 requires-python = ">=3.11"
 dependencies = [
