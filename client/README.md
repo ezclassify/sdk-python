@@ -1,7 +1,46 @@
 # ezclassify-rest-client
 
-HTTP client for the EzClassify REST API. Delegates all operations over HTTP using
-[httpx](https://www.python-httpx.org/). No local JS runtime or Node.js required.
+Python client for the EzClassify REST API. It validates security markings and
+sensitivity labels, combines portion marks into an overall marking, and checks
+who may access a marked document. It works with IC Classification and Control
+Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light
+Protocol (TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking
+rules you write yourself.
+
+The client needs a running EzClassify runtime. The free developer runtime
+includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI. The full CAPCO and
+CUI schemes are licensed content and are not part of any free package.
+
+```sh
+docker run --rm -p 3000:8080 ghcr.io/ezclassify/developer-runtime
+```
+
+```python
+from ezclassify_rest_client import connect_context
+
+with connect_context(
+    "http://localhost:3000", context_id="capco-demo", context_version="1.0.0"
+) as ctx:
+    reading = ctx.scheme.validate("SECRET//NOFORN").result
+    print(reading.rendered, reading.valid)  # SECRET//NOFORN True
+
+    overall = ctx.scheme.aggregate(
+        [
+            "SECRET//REL TO USA, GBR, CAN",
+            "CONFIDENTIAL//REL TO USA, GBR",
+            "UNCLASSIFIED",
+        ]
+    ).result
+    print(overall.rendered)  # SECRET//REL TO USA, GBR
+
+    decision = ctx.access.check_by_marking(
+        "SECRET//NOFORN", {"clearance": "SECRET", "nationality": "GBR"}
+    ).result
+    print("granted:", decision.granted)  # granted: False
+```
+
+The demo access policy refuses a NOFORN marking to a GBR user. The client uses
+httpx and sends nothing a runtime does not declare.
 
 ## Installation
 

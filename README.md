@@ -5,7 +5,9 @@
 [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://pypi.org/project/ezclassify-rest-client/)
 
-Apache-licensed HTTP client for a licensed EzClassify REST runtime. It contains wire models and client ergonomics, not the proprietary engine or enterprise content. One PyPI package is provided: `ezclassify-rest-client`, which carries both the client and the wire models.
+Python client for the EzClassify REST API. It validates security markings and sensitivity labels, combines portion marks into an overall marking, and checks who may access a marked document. It works with IC Classification and Control Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light Protocol (TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking rules you write yourself. It needs a running EzClassify runtime. The free developer runtime includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI; the full CAPCO and CUI schemes are licensed content.
+
+Apache-licensed HTTP client for an EzClassify REST runtime. It contains wire models and client ergonomics, not the proprietary engine or enterprise content. One PyPI package is provided: `ezclassify-rest-client`, which carries both the client and the wire models.
 
 The [ezclassify/contracts](https://github.com/ezclassify/contracts) repository owns
 document and wire types; EzClassify Runtime owns
@@ -65,6 +67,34 @@ granted: False
 `cedar-valley` is a fictional school district policy for teaching, so use
 synthetic markings with it. `GET /v1/ctx` on the runtime lists every built-in
 Context.
+
+### Validate, roll up, check access
+
+The `capco-demo` Context is a demo subset of CAPCO. This validates a marking, rolls portion marks up to an overall marking and checks access:
+
+```python
+from ezclassify_rest_client import connect_context
+
+with connect_context(
+    "http://localhost:3000", context_id="capco-demo", context_version="1.0.0"
+) as ctx:
+    reading = ctx.scheme.validate("SECRET//NOFORN").result
+    print(reading.rendered, reading.valid)  # SECRET//NOFORN True
+
+    overall = ctx.scheme.aggregate(
+        [
+            "SECRET//REL TO USA, GBR, CAN",
+            "CONFIDENTIAL//REL TO USA, GBR",
+            "UNCLASSIFIED",
+        ]
+    ).result
+    print(overall.rendered)  # SECRET//REL TO USA, GBR
+
+    decision = ctx.access.check_by_marking(
+        "SECRET//NOFORN", {"clearance": "SECRET", "nationality": "GBR"}
+    ).result
+    print("granted:", decision.granted)  # granted: False
+```
 
 ### Swap to your runtime
 

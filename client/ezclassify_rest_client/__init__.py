@@ -1,4 +1,13 @@
-"""HTTP client and wire models for the EzClassify REST API."""
+"""Python client for the EzClassify REST API.
+
+Validates security markings and sensitivity labels, combines portion marks into
+an overall marking, and checks access. Needs a running EzClassify runtime::
+
+    from ezclassify_rest_client import connect_context
+
+    with connect_context("http://localhost:3000", context_id="capco-demo") as ctx:
+        print(ctx.scheme.validate("SECRET//NOFORN").result.valid)
+"""
 
 from .client import (
     EzClassifyClient,
