@@ -69,7 +69,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://ezclassify.com/"
-Documentation = "https://ezclassify.com/docs/sdk-clients"
+Documentation = "https://ezclassify.com/docs/sdk-clients/python"
 Repository = "https://github.com/ezclassify/sdk-python"
 Source = "https://github.com/ezclassify/sdk-python"
 Issues = "https://github.com/ezclassify/sdk-python/issues"
