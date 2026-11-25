@@ -1,6 +1,6 @@
 # ezclassify-rest-client
 
-Python client for the EzClassify REST API. It validates security markings and
+Python client library for the EzClassify REST API. It validates security markings and
 sensitivity labels, combines portion marks into an overall marking, and checks
 who may access a marked document. It works with IC Classification and Control
 Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light
