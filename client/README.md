@@ -1,15 +1,15 @@
 # ezclassify-rest-client
 
-Python client library for the EzClassify REST API, installed as a Python package. It validates security markings and
-sensitivity labels, combines portion marks into an overall marking, and checks
-who may access a marked document. It works with IC Classification and Control
-Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light
-Protocol (TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking
-rules you write yourself.
-
-The client needs a running EzClassify runtime. The free developer runtime
-includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI. The full CAPCO and
-CUI schemes are licensed content and are not part of any free package.
+Python client library for the EzClassify REST API, installed as a Python
+package. It is a classification marking parser, validator and rollup with
+need-to-know access checks: it validates security markings and sensitivity
+labels, combines portion marks into an overall marking, and checks who may
+access a marked document. It works with IC Classification and Control Markings
+(CAPCO), Controlled Unclassified Information (CUI), Traffic Light Protocol
+(TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking rules you
+write yourself. It needs a running EzClassify runtime. The free developer
+runtime includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI; the full
+CAPCO and CUI schemes are licensed content.
 
 ```sh
 docker run --rm -p 3000:8080 ghcr.io/ezclassify/developer-runtime

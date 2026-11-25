@@ -5,9 +5,9 @@
 [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://pypi.org/project/ezclassify-rest-client/)
 
-Python client for the EzClassify REST API. It validates security markings and sensitivity labels, combines portion marks into an overall marking, and checks who may access a marked document. It works with IC Classification and Control Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light Protocol (TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking rules you write yourself. It needs a running EzClassify runtime. The free developer runtime includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI; the full CAPCO and CUI schemes are licensed content.
+Python client library for the EzClassify REST API, installed as a Python package. It is a classification marking parser, validator and rollup with need-to-know access checks: it validates security markings and sensitivity labels, combines portion marks into an overall marking, and checks who may access a marked document. It works with IC Classification and Control Markings (CAPCO), Controlled Unclassified Information (CUI), Traffic Light Protocol (TLP) 2.0, Common Vulnerability Scoring System (CVSS), or marking rules you write yourself. It needs a running EzClassify runtime. The free developer runtime includes TLP 2.0, CVSS and demo subsets of CAPCO and CUI; the full CAPCO and CUI schemes are licensed content.
 
-Apache-licensed HTTP client for an EzClassify REST runtime. It contains wire models and client ergonomics, not the proprietary engine or enterprise content. One PyPI package is provided: `ezclassify-rest-client`, which carries both the client and the wire models.
+Apache-licensed, with no engine or enterprise content. It contains wire models and client ergonomics. One PyPI package is provided: `ezclassify-rest-client`, which carries both the client and the wire models.
 
 The [ezclassify/contracts](https://github.com/ezclassify/contracts) repository owns
 document and wire types; EzClassify Runtime owns
