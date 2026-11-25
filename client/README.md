@@ -39,8 +39,8 @@ with connect_context(
     print("granted:", decision.granted)  # granted: False
 ```
 
-The demo access policy refuses a NOFORN marking to a GBR user. The client uses
-httpx and sends nothing a runtime does not declare.
+The demo access policy refuses a NOFORN marking to a GBR user. The client sends
+its requests with httpx and needs no Node.js.
 
 ## Installation
 

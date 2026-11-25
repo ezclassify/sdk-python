@@ -70,7 +70,7 @@ Context.
 
 ### Validate, roll up, check access
 
-The `capco-demo` Context is a demo subset of CAPCO. This validates a marking, rolls portion marks up to an overall marking and checks access:
+The `capco-demo` Context is a demo subset of CAPCO. This validates a marking, rolls several markings up into one overall marking and checks access:
 
 ```python
 from ezclassify_rest_client import connect_context
