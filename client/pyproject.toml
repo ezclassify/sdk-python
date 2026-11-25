@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "ezclassify-rest-client"
 version = "1.0.0.dev30"
-description = "HTTP client and Pydantic wire models for the EzClassify REST API"
+description = "Python client library for the EzClassify REST API: validate security markings and sensitivity labels, combine them into an overall marking, check access. CAPCO, CUI, TLP 2.0, CVSS or your own rules. Needs an EzClassify runtime."
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
@@ -20,7 +20,41 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
     "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = [
+    "classification-marking",
+    "sensitivity-label",
+    "label-based-access-control",
+    "capco",
+    "cui",
+    "ism",
+    "tlp",
+    "cvss",
+    "marking-parser",
+    "marking-validator",
+    "classification-parser",
+    "classification-validator",
+    "classification-marking-parser",
+    "security-marking",
+    "portion-mark",
+    "banner-line",
+    "need-to-know",
+    "access-control",
+    "abac",
+    "releasability",
+    "tlp-validator",
+    "cvss-validator",
+    "cui-marking",
+    "classification",
+    "marking",
+    "library",
+    "sdk",
+    "module",
+    "package",
+    "client",
+    "api",
 ]
 requires-python = ">=3.11"
 dependencies = [
@@ -34,7 +68,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ezclassify/sdk-python"
+Homepage = "https://ezclassify.com/"
+Documentation = "https://ezclassify.com/docs/sdk-clients/python"
+Repository = "https://github.com/ezclassify/sdk-python"
 Source = "https://github.com/ezclassify/sdk-python"
 Issues = "https://github.com/ezclassify/sdk-python/issues"
 
